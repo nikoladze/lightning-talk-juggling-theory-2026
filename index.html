@@ -30,14 +30,24 @@
     const FLOOR_Y       = 320;    // y where ball is caught/thrown
     const LEFT_THROW_X  = 150;    // left hand throw position
     const RIGHT_THROW_X = 450;    // right hand throw position
-    const SCOOP_DUR     = 0.42;   // seconds for the hand-arc phase
+    const SCOOP_DUR     = 0.2;   // seconds for the hand-arc phase
 
-    // Ball definitions: initial throw position, direction, color, start delay
-    const BALL_DEFS = [
-      { x0: LEFT_THROW_X,  vx0: +VX_MAG, color: ['#fff', '#f90', '#a30'], delay: 0    },
-      { x0: RIGHT_THROW_X, vx0: -VX_MAG, color: ['#fff', '#6cf', '#07a'], delay: 0.65 },
-      { x0: LEFT_THROW_X,  vx0: +VX_MAG, color: ['#fff', '#c8f', '#60a'], delay: 1.30 },
-    ];
+    const NUM_BALLS = 9;  // ← change this
+
+    const T_FLIGHT = 2 * Math.abs(VY0) / G;
+    const SPACING  = (T_FLIGHT + SCOOP_DUR) / NUM_BALLS;
+
+    function ballColor(i) {
+      const hue = (i / NUM_BALLS) * 360;
+      return ['#fff', `hsl(${hue},100%,60%)`, `hsl(${hue},100%,28%)`];
+    }
+
+    const BALL_DEFS = Array.from({ length: NUM_BALLS }, (_, i) => ({
+      x0:    i % 2 === 0 ? LEFT_THROW_X  : RIGHT_THROW_X,
+      vx0:   i % 2 === 0 ? +VX_MAG       : -VX_MAG,
+      color: ballColor(i),
+      delay: i * SPACING,
+    }));
 
     function makeBall(def) {
       return {
