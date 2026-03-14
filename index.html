@@ -42,7 +42,7 @@
 <body>
   <canvas id="canvas" width="600" height="840"></canvas>
   <div id="controls">
-    <label>Balls <input id="inBalls" type="number" min="1" max="21" step="2" value="9"></label>
+    <label>Balls <input id="inBalls" type="number" min="1" max="21" step="1" value="9"></label>
     <label>Height <input id="inHeight" type="range" min="50" max="620" value="267"></label>
     <span id="lblHeight">267 px</span>
   </div>
@@ -71,7 +71,10 @@
       const vy0      = -Math.sqrt(2 * G * height);
       const tFlight  = 2 * Math.abs(vy0) / G;
       const spacing  = (tFlight + SCOOP_DUR) / numBalls;
-      const catchDist = (RIGHT_THROW_X - LEFT_THROW_X) + 2 * SCOOP_RADIUS; // 400 px, fixed
+      const isEven = numBalls % 2 === 0;
+      const catchDist = isEven
+        ? 2 * SCOOP_RADIUS
+        : (RIGHT_THROW_X - LEFT_THROW_X) + 2 * SCOOP_RADIUS;
       vxMag = catchDist / tFlight;
 
       function ballColor(i) {
@@ -84,10 +87,11 @@
         timer: -(i * spacing),
         x:   i % 2 === 0 ? LEFT_THROW_X  : RIGHT_THROW_X,
         y:   FLOOR_Y,
-        vx:  i % 2 === 0 ? +vxMag : -vxMag,
+        vx:  isEven ? (i % 2 === 0 ? -vxMag : +vxMag) : (i % 2 === 0 ? +vxMag : -vxMag),
         vy:  0,
         vy0,
         color: ballColor(i),
+        isEven,
         scoop: null,
       }));
 
@@ -102,14 +106,11 @@
     }
 
     function startScoop(ball) {
-      const onRight = ball.x > (LEFT_THROW_X + RIGHT_THROW_X) / 2;
-      const xThrow  = onRight ? RIGHT_THROW_X : LEFT_THROW_X;
-      const vxNext  = onRight ? -vxMag : +vxMag;
-      // Fixed-radius arc: catch position is always SCOOP_RADIUS outside the throw point.
-      // Right hand: catch at xThrow + SCOOP_RADIUS, arc goes left (angle 0 → π).
-      // Left  hand: catch at xThrow - SCOOP_RADIUS, arc goes right (angle π → 0).
-      const goingLeft = onRight;
-      const cx = goingLeft ? xThrow + SCOOP_RADIUS : xThrow - SCOOP_RADIUS;
+      const onLeft    = ball.x <= (LEFT_THROW_X + RIGHT_THROW_X) / 2;
+      const xThrow    = onLeft ? LEFT_THROW_X : RIGHT_THROW_X;
+      const vxNext    = ball.isEven ? (onLeft ? -vxMag : +vxMag) : (onLeft ? +vxMag : -vxMag);
+      const goingLeft = !onLeft;
+      const cx        = goingLeft ? xThrow + SCOOP_RADIUS : xThrow - SCOOP_RADIUS;
       ball.scoop = { cx, r: SCOOP_RADIUS, goingLeft, xThrow, vxNext, t: 0 };
       ball.phase = 'scooping';
     }
