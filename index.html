@@ -67,7 +67,12 @@
     function parseSiteswap(str) {
       str = str.trim();
       if (/[\s,]/.test(str)) return str.split(/[\s,]+/).filter(Boolean).map(Number);
-      return str.split('').map(c => '0123456789'.includes(c) ? +c : 0);
+      return str.split('').map(c => {
+        if (c >= '0' && c <= '9') return +c;
+        const lower = c.toLowerCase();
+        if (lower >= 'a' && lower <= 'z') return lower.charCodeAt(0) - 97 + 10;
+        return 0;
+      });
     }
 
     function restart() {
