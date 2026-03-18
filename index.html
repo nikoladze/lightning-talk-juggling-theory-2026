@@ -53,7 +53,6 @@
     const G             = 1200;
     let siteswap        = [3];
     let T               = 0.3;   // beat duration, recomputed on restart
-    let globalBeat      = 0;
     const RADIUS        = 18;
     const FLOOR_Y       = 640;
     const LEFT_THROW_X  = 150;
@@ -91,29 +90,28 @@
         return ['#fff', `hsl(${hue},100%,60%)`, `hsl(${hue},100%,28%)`];
       }
 
+      // Collect first numBalls beats that have non-zero throw values
+      const ballBeats = [];
+      for (let b = 0; ballBeats.length < numBalls; b++) {
+        if (siteswap[b % P] > 0) ballBeats.push(b);
+      }
+
       balls = Array.from({ length: numBalls }, (_, i) => {
-        const throwVal  = siteswap[i % P];
-        const isEven_i  = throwVal % 2 === 0;
-        const tFlight_i = throwVal * T - SCOOP_DUR;
-        const vy0_i     = -G * tFlight_i / 2;
-        const catchDist = isEven_i ? 2 * SCOOP_RADIUS : (RIGHT_THROW_X - LEFT_THROW_X + 2 * SCOOP_RADIUS);
-        const vxMag_i   = catchDist / tFlight_i;
-        const onLeft    = i % 2 === 0;
-        const vx_i      = isEven_i ? (onLeft ? -vxMag_i : +vxMag_i) : (onLeft ? +vxMag_i : -vxMag_i);
+        const beat   = ballBeats[i];
+        const onLeft = beat % 2 === 0;
         return {
-          phase: 'waiting',
-          timer: -(i * T),
-          x:     onLeft ? LEFT_THROW_X : RIGHT_THROW_X,
-          y:     FLOOR_Y,
-          vx:    vx_i,
-          vy:    0,
-          vy0:   vy0_i,
-          color: ballColor(i),
-          scoop: null,
+          phase:     'waiting',
+          timer:     -(beat * T),
+          x:         onLeft ? LEFT_THROW_X : RIGHT_THROW_X,
+          y:         FLOOR_Y,
+          vx:        0,
+          vy:        0,
+          vy0:       0,
+          color:     ballColor(i),
+          beatIndex: beat,  // beat at which this ball's next scoop completes (= its next throw)
+          scoop:     null,
         };
       });
-
-      globalBeat = numBalls;
       lastTime = null;
       if (animId) cancelAnimationFrame(animId);
       animId = requestAnimationFrame(loop);
@@ -137,8 +135,12 @@
       const s = ball.scoop;
       s.t += dt / SCOOP_DUR;
       if (s.t >= 1) {
-        const throwVal  = siteswap[globalBeat % siteswap.length];
-        globalBeat++;
+        // Advance past any 0-valued beats (shouldn't occur in valid siteswap)
+        let safety = 0;
+        while (siteswap[ball.beatIndex % siteswap.length] === 0 && safety++ < siteswap.length) {
+          ball.beatIndex++;
+        }
+        const throwVal  = siteswap[ball.beatIndex % siteswap.length];
         const isEven    = throwVal % 2 === 0;
         const tFlight   = Math.max(0.01, throwVal * T - SCOOP_DUR);
         const catchDist = isEven ? 2 * SCOOP_RADIUS : (RIGHT_THROW_X - LEFT_THROW_X + 2 * SCOOP_RADIUS);
@@ -149,6 +151,7 @@
         ball.y    = FLOOR_Y;
         ball.vx   = vxNext;
         ball.vy0  = -G * tFlight / 2;
+        ball.beatIndex += throwVal;
         ball.scoop = null;
         launch(ball);
         return;
@@ -180,7 +183,7 @@
       for (const ball of balls) {
         if (ball.phase === 'waiting') {
           ball.timer += dt;
-          if (ball.timer >= 0) launch(ball);
+          if (ball.timer >= 0) startScoop(ball);
         } else if (ball.phase === 'flying') {
           ball.vy += G * dt;
           ball.x  += ball.vx * dt;
