@@ -105,30 +105,43 @@
         return ['#fff', `hsl(${hue},100%,60%)`, `hsl(${hue},100%,28%)`];
       }
 
-      // Collect first numBalls beats that have non-zero throw values
-      const ballBeats = [];
-      for (let b = 0; ballBeats.length < numBalls; b++) {
-        if (siteswap[b % P] > 0) ballBeats.push(b);
-      }
+      // Compute initial state: for each future beat [0, maxThrow), find the unique
+      // past throw that places a ball there. Balls not at beat 0 are already in the air.
+      const maxThrow = Math.max(...siteswap);
+      balls = [];
+      for (let landBeat = 0; landBeat < maxThrow; landBeat++) {
+        for (let throwVal = 1; throwVal <= maxThrow; throwVal++) {
+          const sourceBeat = landBeat - throwVal;
+          if (sourceBeat >= 0) continue;
+          if (siteswap[((sourceBeat % P) + P) % P] !== throwVal) continue;
 
-      balls = Array.from({ length: numBalls }, (_, i) => {
-        const beat   = ballBeats[i];
-        const onLeft = beat % 2 === 0;
-        return {
-          phase:     'waiting',
-          tStart:    beat * T,
-          x:         onLeft ? LEFT_THROW_X : RIGHT_THROW_X,
-          y:         FLOOR_Y,
-          vx:        0,
-          vy0:       0,
-          tLaunch:   0,
-          tLand:     0,
-          x0:        0,
-          color:     ballColor(i),
-          beatIndex: beat,
-          scoop:     null,
-        };
-      });
+          const sourceOnLeft = ((sourceBeat % 2) + 2) % 2 === 0;
+          const xThrow      = sourceOnLeft ? LEFT_THROW_X : RIGHT_THROW_X;
+          const isEven      = throwVal % 2 === 0;
+          const tFlight     = throwVal * T - SCOOP_DUR;
+          const catchDist   = isEven ? 2 * SCOOP_RADIUS : (RIGHT_THROW_X - LEFT_THROW_X + 2 * SCOOP_RADIUS);
+          const vxMag       = catchDist / tFlight;
+          const vxNext      = isEven ? (sourceOnLeft ? -vxMag : vxMag) : (sourceOnLeft ? vxMag : -vxMag);
+          const catchOnLeft = isEven ? sourceOnLeft : !sourceOnLeft;
+          const xCatch      = catchOnLeft ? LEFT_THROW_X - 2 * SCOOP_RADIUS : RIGHT_THROW_X + 2 * SCOOP_RADIUS;
+
+          balls.push({
+            phase:   landBeat === 0 ? 'waiting' : 'flying',
+            tStart:  0,
+            x:       xCatch,
+            y:       FLOOR_Y,
+            x0:      landBeat === 0 ? 0       : xThrow,
+            vx:      landBeat === 0 ? 0       : vxNext,
+            vy0:     landBeat === 0 ? 0       : -G * tFlight / 2,
+            tLaunch: landBeat === 0 ? 0       : sourceBeat * T + SCOOP_DUR,
+            tLand:   landBeat === 0 ? 0       : landBeat * T,
+            color:   ballColor(balls.length),
+            beatIndex: landBeat,
+            scoop:   null,
+          });
+          break;
+        }
+      }
       animStartTime = null;
       if (animId) cancelAnimationFrame(animId);
       animId = requestAnimationFrame(loop);
