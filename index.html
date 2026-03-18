@@ -126,15 +126,14 @@
           const xCatch      = catchOnLeft ? LEFT_THROW_X - 2 * SCOOP_RADIUS : RIGHT_THROW_X + 2 * SCOOP_RADIUS;
 
           balls.push({
-            phase:   landBeat === 0 ? 'waiting' : 'flying',
-            tStart:  0,
+            phase:   'flying',
             x:       xCatch,
             y:       FLOOR_Y,
-            x0:      landBeat === 0 ? 0       : xThrow,
-            vx:      landBeat === 0 ? 0       : vxNext,
-            vy0:     landBeat === 0 ? 0       : -G * tFlight / 2,
-            tLaunch: landBeat === 0 ? 0       : sourceBeat * T + SCOOP_DUR,
-            tLand:   landBeat === 0 ? 0       : landBeat * T,
+            x0:      xThrow,
+            vx:      vxNext,
+            vy0:     -G * tFlight / 2,
+            tLaunch: sourceBeat * T + SCOOP_DUR,
+            tLand:   landBeat * T,
             color:   ballColor(balls.length),
             beatIndex: landBeat,
             scoop:   null,
@@ -148,11 +147,36 @@
     }
 
     function startScoop(ball, tNow) {
-      const onLeft    = ball.x <= (LEFT_THROW_X + RIGHT_THROW_X) / 2;
-      const xThrow    = onLeft ? LEFT_THROW_X : RIGHT_THROW_X;
-      const goingLeft = !onLeft;
-      const cx        = goingLeft ? xThrow + SCOOP_RADIUS : xThrow - SCOOP_RADIUS;
-      ball.scoop = { cx, r: SCOOP_RADIUS, goingLeft, xThrow, tStart: tNow, tEnd: tNow + SCOOP_DUR };
+      const onLeft = ball.x <= (LEFT_THROW_X + RIGHT_THROW_X) / 2;
+      const xThrow = onLeft ? LEFT_THROW_X : RIGHT_THROW_X;
+
+      // Incoming velocity at landing
+      const vxIn = ball.vx;
+      const vyIn = G * (tNow - ball.tLaunch) / 2; // = G*tFlight/2, positive = downward
+
+      // Look ahead: outgoing throw velocity (read-only, same logic as completeScoop)
+      let bi = ball.beatIndex, safety = 0;
+      while (siteswap[bi % siteswap.length] === 0 && safety++ < siteswap.length) bi++;
+      const throwVal  = siteswap[bi % siteswap.length];
+      const isEven    = throwVal % 2 === 0;
+      const tFlight   = Math.max(0.01, throwVal * T - SCOOP_DUR);
+      const catchDist = isEven ? 2 * SCOOP_RADIUS : (RIGHT_THROW_X - LEFT_THROW_X + 2 * SCOOP_RADIUS);
+      const vxMag     = catchDist / tFlight;
+      const vxOut     = isEven ? (onLeft ? -vxMag : +vxMag) : (onLeft ? +vxMag : -vxMag);
+      const vy0Out    = -G * tFlight / 2; // negative = upward
+
+      // Cubic Bézier: normalize tangent directions, scale by SCOOP_RADIUS
+      // P'(0)/3 ∝ incoming velocity → no kink at catch
+      // P'(1)/3 ∝ outgoing velocity → no kink at throw
+      const x0 = ball.x, y0 = FLOOR_Y, x3 = xThrow, y3 = FLOOR_Y;
+      const lenIn  = Math.hypot(vxIn, vyIn)  || 1;
+      const lenOut = Math.hypot(vxOut, vy0Out) || 1;
+      const cx1 = x0 + (vxIn  / lenIn)  * SCOOP_RADIUS;
+      const cy1 = y0 + (vyIn  / lenIn)  * SCOOP_RADIUS;  // > FLOOR_Y (dips down)
+      const cx2 = x3 - (vxOut / lenOut) * SCOOP_RADIUS;
+      const cy2 = y3 - (vy0Out / lenOut) * SCOOP_RADIUS; // > FLOOR_Y (dips down)
+
+      ball.scoop = { tStart: tNow, tEnd: tNow + SCOOP_DUR, x0, y0, cx1, cy1, cx2, cy2, x3, y3, xThrow };
       ball.phase = 'scooping';
     }
 
@@ -183,9 +207,7 @@
 
     function updateBall(ball, t) {
       for (let i = 0; i < 200; i++) {
-        if (ball.phase === 'waiting' && t >= ball.tStart) {
-          startScoop(ball, ball.tStart);
-        } else if (ball.phase === 'flying' && t >= ball.tLand) {
+        if (ball.phase === 'flying' && t >= ball.tLand) {
           // update x,y to the exact landing position before startScoop reads ball.x
           ball.x = ball.x0 + ball.vx * (ball.tLand - ball.tLaunch);
           ball.y = FLOOR_Y;
@@ -199,12 +221,11 @@
         ball.x = ball.x0 + ball.vx * tau;
         ball.y = FLOOR_Y + ball.vy0 * tau + 0.5 * G * tau * tau;
       } else if (ball.phase === 'scooping') {
-        const frac  = (t - ball.scoop.tStart) / SCOOP_DUR;
-        const angle = ball.scoop.goingLeft ? frac * Math.PI : Math.PI * (1 - frac);
-        ball.x = ball.scoop.cx + ball.scoop.r * Math.cos(angle);
-        ball.y = FLOOR_Y + ball.scoop.r * Math.sin(angle);
+        const s = ball.scoop;
+        const f = (t - s.tStart) / SCOOP_DUR, g = 1 - f;
+        ball.x = g*g*g*s.x0 + 3*g*g*f*s.cx1 + 3*g*f*f*s.cx2 + f*f*f*s.x3;
+        ball.y = g*g*g*s.y0 + 3*g*g*f*s.cy1 + 3*g*f*f*s.cy2 + f*f*f*s.y3;
       }
-      // 'waiting': ball stays at initial x,y
     }
 
     function drawBall(x, y, colors) {
