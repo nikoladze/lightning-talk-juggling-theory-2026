@@ -276,11 +276,12 @@
       if (anim2) anim2.stop();
       resetDiagram();
       anim2 = startJuggling(canvas2, {
-        siteswap: '51',
-        refThrow: 5,
-        height:   Math.round(canvas2.height * 0.48),
-        spacing:  Math.round(canvas2.width  * 0.30),
-        floorY:   Math.round(canvas2.height * 0.62),
+        siteswap:       '51',
+        refThrow:       5,
+        height:         Math.round(canvas2.height * 0.48),
+        spacing:        Math.round(canvas2.width  * 0.30),
+        floorY:         Math.round(canvas2.height * 0.62),
+        throwCutoffBeat: 6,
       });
       // re-apply visible fragments and seek animation to matching position
       let visibleBeats = 0;

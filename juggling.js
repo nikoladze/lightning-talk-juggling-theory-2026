@@ -11,12 +11,13 @@
 //               throwVal: the throw value at that beat
 //               color:    ball color array ['#fff', midColor, darkColor]
 function startJuggling(canvas, {
-  siteswap:  rawSiteswap = '3',
-  refThrow   = 3,
-  height     = 267,
-  spacing    = 300,
-  floorY     = null,
-  onBeat     = null,
+  siteswap:         rawSiteswap = '3',
+  refThrow          = 3,
+  height            = 267,
+  spacing           = 300,
+  floorY            = null,
+  onBeat            = null,
+  throwCutoffBeat   = null,   // balls landing at beat >= this disappear instead of re-throwing
 } = {}) {
   const ctx = canvas.getContext('2d');
 
@@ -48,7 +49,8 @@ function startJuggling(canvas, {
 
   const P        = ss.length;
   const numBalls = Math.round(ss.reduce((a, b) => a + b, 0) / P);
-  const T        = (2 * Math.sqrt(2 * height / G) + SCOOP_DUR) / Math.max(1, refThrow);
+  const T            = (2 * Math.sqrt(2 * height / G) + SCOOP_DUR) / Math.max(1, refThrow);
+  const throwCutoffT = throwCutoffBeat !== null ? throwCutoffBeat * T : null;
 
   function ballColor(i) {
     const hue = (i / numBalls) * 360;
@@ -156,6 +158,10 @@ function startJuggling(canvas, {
   function updateBall(ball, t) {
     for (let i = 0; i < 200; i++) {
       if (ball.phase === 'flying' && t >= ball.tLand) {
+        if (throwCutoffT !== null && ball.tLand >= throwCutoffT) {
+          ball.phase = 'gone';
+          break;
+        }
         ball.x = ball.x0 + ball.vx * (ball.tLand - ball.tLaunch);
         ball.y = FLOOR_Y;
         startScoop(ball, ball.tLand);
@@ -197,7 +203,7 @@ function startJuggling(canvas, {
 
     if (simLimit !== null && t >= simLimit) {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      for (const ball of balls) { updateBall(ball, simLimit); drawBall(ball.x, ball.y, ball.color); }
+      for (const ball of balls) { updateBall(ball, simLimit); if (ball.phase !== 'gone') drawBall(ball.x, ball.y, ball.color); }
       simOffset = simLimit;
       animId = null;
       return;
@@ -206,7 +212,7 @@ function startJuggling(canvas, {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     for (const ball of balls) {
       updateBall(ball, t);
-      drawBall(ball.x, ball.y, ball.color);
+      if (ball.phase !== 'gone') drawBall(ball.x, ball.y, ball.color);
     }
     animId = requestAnimationFrame(loop);
   }
@@ -218,7 +224,7 @@ function startJuggling(canvas, {
     initialBalls.forEach(b => balls.push({ ...b }));
     for (const ball of balls) updateBall(ball, targetT);
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    for (const ball of balls) drawBall(ball.x, ball.y, ball.color);
+    for (const ball of balls) { if (ball.phase !== 'gone') drawBall(ball.x, ball.y, ball.color); }
     simOffset = targetT;
     animStartTime = null;
   }
