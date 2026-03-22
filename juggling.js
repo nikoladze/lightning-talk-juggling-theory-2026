@@ -158,13 +158,18 @@ function startJuggling(canvas, {
   function updateBall(ball, t) {
     for (let i = 0; i < 200; i++) {
       if (ball.phase === 'flying' && t >= ball.tLand) {
-        if (throwCutoffT !== null && ball.tLand >= throwCutoffT) {
-          ball.phase = 'gone';
-          break;
-        }
         ball.x = ball.x0 + ball.vx * (ball.tLand - ball.tLaunch);
         ball.y = FLOOR_Y;
-        startScoop(ball, ball.tLand);
+        if (throwCutoffT !== null && ball.tLand >= throwCutoffT) {
+          ball.phase = 'landed';
+          ball.tDisappear = ball.tLand + 1e-6;
+          // fall through to check 'landed' next iteration
+        } else {
+          startScoop(ball, ball.tLand);
+        }
+      } else if (ball.phase === 'landed' && t >= ball.tDisappear) {
+        ball.phase = 'gone';
+        break;
       } else if (ball.phase === 'scooping' && t >= ball.scoop.tEnd) {
         completeScoop(ball, ball.scoop.tEnd);
       } else break;
