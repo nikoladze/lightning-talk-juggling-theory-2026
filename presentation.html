@@ -53,7 +53,7 @@
     <div class="slides">
 
       <!-- Slide 1: 441 juggling -->
-      <section>
+      <section data-slide="juggling-441">
         <div class="slide-juggling">
           <canvas id="juggle-canvas"></canvas>
           <div id="siteswap-display">
@@ -65,7 +65,7 @@
       </section>
 
       <!-- Slide 2: 51 juggling + state diagram -->
-      <section>
+      <section data-slide="juggling-51">
         <div style="position:relative;width:100%;height:100%;">
         <!-- full-slide background canvas for the 51 animation -->
         <canvas id="canvas-51" style="position:absolute;top:0;left:0;width:100%;height:100%;"></canvas>
@@ -305,28 +305,32 @@
     }
 
     // ── Lifecycle ─────────────────────────────────────────────────────────────
+    const slideId = el => el?.dataset?.slide ?? null;
+
     Reveal.on('ready', () => {
-      console.log("ready");
-      if (Reveal.getIndices().h === 0) startAnimation();
-      if (Reveal.getIndices().h === 1) startAnim2();
+      const slide = Reveal.getCurrentSlide();
+      if (slideId(slide) === 'juggling-441') startAnimation();
+      if (slideId(slide) === 'juggling-51')  startAnim2();
     });
 
     Reveal.on('slidechanged', event => {
-      if (event.indexh === 0) startAnimation();
-      if (event.indexh != 0) anim.stop();
-      if (event.indexh === 1) startAnim2();
-      if (event.indexh != 1) stopAnim2();
+      const prev = slideId(event.previousSlide);
+      const curr = slideId(event.currentSlide);
+      if (prev === 'juggling-441') anim?.stop();
+      if (prev === 'juggling-51')  stopAnim2();
+      if (curr === 'juggling-441') startAnimation();
+      if (curr === 'juggling-51')  startAnim2();
     });
 
     Reveal.on('fragmentshown', event => {
-      if (Reveal.getIndices().h !== 1) return;
+      if (slideId(Reveal.getCurrentSlide()) !== 'juggling-51') return;
       const beat = parseInt(event.fragment.getAttribute('data-fragment-index'));
       revealBeat(beat);
       anim2.stepBeats(1);
     });
 
     Reveal.on('fragmenthidden', event => {
-      if (Reveal.getIndices().h !== 1) return;
+      if (slideId(Reveal.getCurrentSlide()) !== 'juggling-51') return;
       const beat = parseInt(event.fragment.getAttribute('data-fragment-index'));
       hideBeat(beat);
       anim2.seekTo(beat * anim2.T);
