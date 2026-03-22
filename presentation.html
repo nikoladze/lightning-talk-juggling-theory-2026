@@ -118,10 +118,13 @@
                 .fill('#888').font({ size: 14, family: 'sans-serif', anchor: 'middle' });
           // lbl('throws',       Math.round((cx(0) + cx(5)) / 2));
           // lbl('balls in air', Math.round((cx(6) + cx(9)) / 2));
+	  draw.plain('stop').attr({x: (cx(5) + cx(6)) / 2, y: 18}).fill('#000').font({ size: 20, family: 'sans-serif', anchor: 'middle' });
 
           // separator
-          draw.line(SEP, 16, SEP, Y0 + CH + 8)
-              .stroke({ color: '#bbb', width: 1.5, dasharray: '5,4' });
+          draw.line(SEP, 30, SEP, Y0 + CH + 8)
+            .stroke({ color: '#000', width: 2.5,
+		      //dasharray: '5,4'
+		    });
 
           // cells + beat-index labels
           CELLS.forEach(([label, ball], i) => {
@@ -133,8 +136,8 @@
             draw.plain(label).attr({ x: c, y: Y0 + 37 }).id('cell-label-' + i)
                 .fill(empty ? '#bbb' : stroke)
                 .font({ size: 28, family: 'monospace', weight: 'bold', anchor: 'middle' });
-            draw.plain(String(i)).attr({ x: c, y: Y0 + CH + 10 })
-                .fill('#999').font({ size: 12, family: 'monospace', anchor: 'middle' });
+            // draw.plain(String(i)).attr({ x: c, y: Y0 + CH + 10 })
+            //     .fill('#999').font({ size: 12, family: 'monospace', anchor: 'middle' });
           });
 
           // arrows — hidden; revealed by onBeat at throw time
@@ -149,8 +152,8 @@
 
           // caption
           draw.text(add => {
-            add.tspan('if no more throws are made, each ball lands on its ').fill('#999');
-            add.tspan('x').fill('#aaa').font({ style: 'italic' });
+            // add.tspan('if no more throws are made, each ball lands on its ').fill('#999');
+            // add.tspan('x').fill('#aaa').font({ style: 'italic' });
           }).attr({ x: 480, y: 258, 'text-anchor': 'middle' })
             .font({ size: 13, family: 'sans-serif' });
         })();
@@ -182,6 +185,7 @@
 
     // ── Slide 1: 441 ─────────────────────────────────────────────────────────
     const canvas = document.getElementById('juggle-canvas');
+    let anim = null;
     const digits = [
       document.getElementById('d0'),
       document.getElementById('d1'),
@@ -203,7 +207,7 @@
     function startAnimation() {
       canvas.width  = canvas.offsetWidth;
       canvas.height = canvas.offsetHeight;
-      startJuggling(canvas, {
+      anim = startJuggling(canvas, {
         siteswap: '441',
         refThrow: 4,
         height:   Math.round(canvas.height * 0.55),
@@ -298,13 +302,16 @@
 
     // ── Lifecycle ─────────────────────────────────────────────────────────────
     Reveal.on('ready', () => {
-      startAnimation();
+      console.log("ready");
+      if (Reveal.getIndices().h === 0) startAnimation();
       if (Reveal.getIndices().h === 1) startAnim2();
     });
 
     Reveal.on('slidechanged', event => {
+      if (event.indexh === 0) startAnimation();
+      if (event.indexh != 0) anim.stop();
       if (event.indexh === 1) startAnim2();
-      else stopAnim2();
+      if (event.indexh != 1) stopAnim2();
     });
 
     Reveal.on('fragmentshown', event => {

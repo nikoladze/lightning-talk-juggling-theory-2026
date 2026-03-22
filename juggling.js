@@ -199,7 +199,7 @@ function startJuggling(canvas, {
   function drawFloor() {
     if (!showFloor) return;
     ctx.save();
-    ctx.strokeStyle = 'rgba(0,0,0,0.15)';
+    ctx.strokeStyle = 'rgba(0,0,0,1)';
     ctx.lineWidth = 1.5;
     ctx.setLineDash([8, 6]);
     ctx.beginPath();
