@@ -6,12 +6,17 @@
 //   height    – peak height of refThrow in px      (default 267)
 //   spacing   – distance between hands in px        (default 300)
 //   floorY    – y-coordinate of the throw floor     (default canvas.height - 70)
+//   onBeat    – callback(beatPos, throwVal, color) fired when each scoop begins
+//               beatPos:  index into the siteswap pattern (0-based)
+//               throwVal: the throw value at that beat
+//               color:    ball color array ['#fff', midColor, darkColor]
 function startJuggling(canvas, {
   siteswap:  rawSiteswap = '3',
   refThrow   = 3,
   height     = 267,
   spacing    = 300,
   floorY     = null,
+  onBeat     = null,
 } = {}) {
   const ctx = canvas.getContext('2d');
 
@@ -86,6 +91,8 @@ function startJuggling(canvas, {
     }
   }
 
+  const initialBalls = balls.map(b => ({ ...b }));
+
   // ── scoop transitions ──────────────────────────────────────────────────────
   function startScoop(ball, tNow) {
     const onLeft = ball.x <= (LEFT_THROW_X + RIGHT_THROW_X) / 2;
@@ -98,6 +105,7 @@ function startJuggling(canvas, {
     let bi = ball.beatIndex, safety = 0;
     while (ss[bi % ss.length] === 0 && safety++ < ss.length) bi++;
     const tv    = ss[bi % ss.length];
+    if (onBeat) onBeat(bi % P, tv, ball.color);
     const even  = tv % 2 === 0;
     const tf    = Math.max(0.01, tv * T - SCOOP_DUR);
     const cd    = even ? 2 * SCOOP_RADIUS : RIGHT_THROW_X - LEFT_THROW_X + 2 * SCOOP_RADIUS;
@@ -180,10 +188,21 @@ function startJuggling(canvas, {
   // ── animation loop ─────────────────────────────────────────────────────────
   let animId = null;
   let animStartTime = null;
+  let simOffset = 0;
+  let simLimit  = null;
 
   function loop(timestamp) {
     if (animStartTime === null) animStartTime = timestamp;
-    const t = (timestamp - animStartTime) / 1000;
+    const t = simOffset + (timestamp - animStartTime) / 1000;
+
+    if (simLimit !== null && t >= simLimit) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      for (const ball of balls) { updateBall(ball, simLimit); drawBall(ball.x, ball.y, ball.color); }
+      simOffset = simLimit;
+      animId = null;
+      return;
+    }
+
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     for (const ball of balls) {
       updateBall(ball, t);
@@ -192,11 +211,31 @@ function startJuggling(canvas, {
     animId = requestAnimationFrame(loop);
   }
 
+  function seekTo(targetT) {
+    if (animId !== null) { cancelAnimationFrame(animId); animId = null; }
+    simLimit = null;
+    balls.length = 0;
+    initialBalls.forEach(b => balls.push({ ...b }));
+    for (const ball of balls) updateBall(ball, targetT);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    for (const ball of balls) drawBall(ball.x, ball.y, ball.color);
+    simOffset = targetT;
+    animStartTime = null;
+  }
+
+  function stepBeats(n) {
+    simLimit = simOffset + n * T;
+    animStartTime = null;
+    if (animId !== null) cancelAnimationFrame(animId);
+    animId = requestAnimationFrame(loop);
+  }
+
   animId = requestAnimationFrame(loop);
 
   return {
-    stop() {
-      if (animId !== null) { cancelAnimationFrame(animId); animId = null; }
-    },
+    stop()    { if (animId !== null) { cancelAnimationFrame(animId); animId = null; } },
+    T,
+    seekTo,
+    stepBeats,
   };
 }

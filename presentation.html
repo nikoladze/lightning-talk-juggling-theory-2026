@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Juggling Presentation</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5/dist/reveal.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5/dist/theme/black.css">
+  <script src="https://cdn.jsdelivr.net/npm/@svgdotjs/svg.js@3/dist/svg.min.js"></script>
+  <style>
+    .reveal .slides section {
+      height: 100%;
+      padding: 0;
+    }
+    .slide-juggling {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    #juggle-canvas {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+    }
+    #siteswap-display {
+      position: relative;
+      z-index: 10;
+      display: flex;
+      gap: 0.3em;
+      font-size: 18vw;
+      font-weight: bold;
+      font-family: monospace;
+      line-height: 1;
+      pointer-events: none;
+      /* push it toward top-center */
+      margin-top: 4vh;
+      align-self: flex-start;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .ss-digit {
+      transition: color 0.12s;
+      color: #333;
+      text-shadow: 0 2px 12px rgba(0,0,0,0.7);
+    }
+  </style>
+</head>
+<body>
+  <div class="reveal">
+    <div class="slides">
+
+      <!-- Slide 1: 441 juggling -->
+      <section>
+        <div class="slide-juggling">
+          <canvas id="juggle-canvas"></canvas>
+          <div id="siteswap-display">
+            <span class="ss-digit" id="d0">4</span>
+            <span class="ss-digit" id="d1">4</span>
+            <span class="ss-digit" id="d2">1</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Slide 2: 51 juggling + state diagram -->
+      <section>
+        <div style="position:relative;width:100%;height:100%;">
+        <!-- full-slide background canvas for the 51 animation -->
+        <canvas id="canvas-51" style="position:absolute;top:0;left:0;width:100%;height:100%;"></canvas>
+        <!-- state diagram overlaid at bottom with gradient for legibility -->
+        <div style="position:absolute;bottom:0;left:0;right:0;
+                    background:linear-gradient(transparent,rgba(0,0,0,0.9) 28%);
+                    padding-top:70px;">
+        <div id="state-diagram-container"></div>
+        <script>
+        (function () {
+          // ── layout ──────────────────────────────────────────────────────────
+          const CW = 65, CH = 70, STEP = 75, X0 = 110, Y0 = 130;
+          const cx = i => X0 + i * STEP + (CW >> 1);  // horizontal centre of cell i
+
+          // ── ball palette: hues 0°, 120°, 240° ───────────────────────────────
+          const HUE  = [0, 120, 240];
+          const MID  = i => `hsl(${HUE[i]},100%,60%)`;   // bright stroke / text
+          const DARK = ['#1f0808', '#0b1f0b', '#08081e']; // dim cell fill
+
+          // ── cell data: [label, ballIndex]  (-1 = empty beat) ────────────────
+          const CELLS = [
+            ['5', 0], ['1', 1], ['5', 1], ['1', 2],
+            ['5', 2], ['1', 0], ['x', 0], ['x', 1],
+            ['-',-1], ['x', 2],
+          ];
+
+          // ── arrow data: [srcBeat, dstBeat, controlY]  (reveal order = index) ─
+          const ARROWS = [
+            [0, 5,  10],   // beat 0 → 5  (throw 5, ball 0 red)
+            [1, 2,  80],   // beat 1 → 2  (throw 1, ball 1 green)
+            [2, 7,  40],   // beat 2 → 7  (throw 5, ball 1 green)
+            [3, 4,  80],   // beat 3 → 4  (throw 1, ball 2 blue)
+            [4, 9,  65],   // beat 4 → 9  (throw 5, ball 2 blue)
+            [5, 6,  80],   // beat 5 → 6  (throw 1, ball 0 red)
+          ];
+
+          // ── draw ────────────────────────────────────────────────────────────
+          const draw = SVG().addTo('#state-diagram-container')
+            .viewbox(0, 0, 960, 275)
+            .attr({ style: 'width:100%;display:block;' });
+
+          // arrowhead markers (one per ball)
+          const markers = HUE.map((_, i) =>
+            draw.marker(10, 7, add => add.polygon('0 0,10 3.5,0 7').fill(MID(i)))
+                .attr({ refX: 10, refY: 3.5, orient: 'auto' })
+          );
+
+          // region labels
+          const SEP = Math.round((cx(5) + cx(6)) / 2);
+          const lbl = (text, x) =>
+            draw.plain(text).attr({ x, y: 26 })
+                .fill('#666').font({ size: 14, family: 'sans-serif', anchor: 'middle' });
+          lbl('throws',       Math.round((cx(0) + cx(5)) / 2));
+          lbl('balls in air', Math.round((cx(6) + cx(9)) / 2));
+
+          // separator
+          draw.line(SEP, 16, SEP, Y0 + CH + 8)
+              .stroke({ color: '#555', width: 1.5, dasharray: '5,4' });
+
+          // cells + beat-index labels
+          CELLS.forEach(([label, ball], i) => {
+            const x = X0 + i * STEP, c = cx(i), empty = ball < 0;
+            const stroke = empty ? '#3a3a3a' : MID(ball);
+            draw.rect(CW, CH).move(x, Y0).radius(5).id('cell-rect-' + i)
+                .fill(empty ? '#181818' : DARK[ball])
+                .stroke({ color: stroke, width: empty ? 1.5 : 2 });
+            draw.plain(label).attr({ x: c, y: Y0 + 37 }).id('cell-label-' + i)
+                .fill(empty ? '#484848' : stroke)
+                .font({ size: 28, family: 'monospace', weight: 'bold', anchor: 'middle' });
+            draw.plain(String(i)).attr({ x: c, y: Y0 + CH + 10 })
+                .fill('#444').font({ size: 12, family: 'monospace', anchor: 'middle' });
+          });
+
+          // arrows — hidden; revealed by onBeat at throw time
+          ARROWS.forEach(([src, dst, cy], i) => {
+            const ball = CELLS[src][1], mid = Math.round((cx(src) + cx(dst)) / 2);
+            draw.group().id('arrow-' + i)
+                .attr({ style: 'opacity:0;transition:opacity 0.25s ease' })
+                .path(`M ${cx(src)},${Y0} Q ${mid},${cy} ${cx(dst)},${Y0}`)
+                .fill('none').stroke({ color: MID(ball), width: 2.5 })
+                .marker('end', markers[ball]);
+          });
+
+          // caption
+          draw.text(add => {
+            add.tspan('if no more throws are made, each ball lands on its ').fill('#555');
+            add.tspan('x').fill('#777').font({ style: 'italic' });
+          }).attr({ x: 480, y: 258, 'text-anchor': 'middle' })
+            .font({ size: 13, family: 'sans-serif' });
+        })();
+        </script>
+        </div><!-- /overlay -->
+        <!-- invisible fragment triggers: one per beat (0–9) -->
+        <div id="frag-triggers" style="position:absolute;width:0;height:0;overflow:hidden;">
+          <span class="fragment" data-fragment-index="0"></span>
+          <span class="fragment" data-fragment-index="1"></span>
+          <span class="fragment" data-fragment-index="2"></span>
+          <span class="fragment" data-fragment-index="3"></span>
+          <span class="fragment" data-fragment-index="4"></span>
+          <span class="fragment" data-fragment-index="5"></span>
+          <span class="fragment" data-fragment-index="6"></span>
+          <span class="fragment" data-fragment-index="7"></span>
+          <span class="fragment" data-fragment-index="8"></span>
+          <span class="fragment" data-fragment-index="9"></span>
+        </div>
+        </div><!-- /relative wrapper -->
+      </section>
+
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/reveal.js@5/dist/reveal.js"></script>
+  <script src="juggling.js"></script>
+  <script>
+    Reveal.initialize({ hash: true, controls: false, progress: false });
+
+    // ── Slide 1: 441 ─────────────────────────────────────────────────────────
+    const canvas = document.getElementById('juggle-canvas');
+    const digits = [
+      document.getElementById('d0'),
+      document.getElementById('d1'),
+      document.getElementById('d2'),
+    ];
+    const lastColor = [null, null, null];
+
+    function onBeat(beatPos, throwVal, color) {
+      const mid = color[1];
+      digits[beatPos].style.color = mid;
+      digits[beatPos].style.textShadow = `0 0 40px ${mid}, 0 2px 12px rgba(0,0,0,0.7)`;
+      if (lastColor[beatPos]) clearTimeout(lastColor[beatPos]);
+      lastColor[beatPos] = setTimeout(() => {
+        digits[beatPos].style.color = '#333';
+        digits[beatPos].style.textShadow = '0 2px 12px rgba(0,0,0,0.7)';
+      }, 400);
+    }
+
+    function startAnimation() {
+      canvas.width  = canvas.offsetWidth;
+      canvas.height = canvas.offsetHeight;
+      startJuggling(canvas, {
+        siteswap: '441',
+        refThrow: 4,
+        height:   Math.round(canvas.height * 0.55),
+        spacing:  Math.round(canvas.width  * 0.28),
+        floorY:   Math.round(canvas.height * 0.82),
+        onBeat,
+      });
+    }
+
+    // ── Slide 2: 51 ──────────────────────────────────────────────────────────
+    const canvas2 = document.getElementById('canvas-51');
+    let anim2 = null;
+
+    // beat → ball index (-1 = empty); matches CELLS in the IIFE
+    const CELL_BALL  = [0, 1, 1, 2, 2, 0, 0, 1, -1, 2];
+    // beat → arrow index that LANDS on that beat
+    const LANDING_AT = {5:0, 2:1, 7:2, 4:3, 9:4, 6:5};
+    const DARK_FILL  = ['#1f0808', '#0b1f0b', '#08081e'];
+    const hue2 = i => `hsl(${[0, 120, 240][i]},100%,60%)`;
+
+    function resetDiagram() {
+      for (let i = 0; i < 6; i++) {
+        const el = document.getElementById('arrow-' + i);
+        if (el) { el.style.transition = 'none'; el.style.opacity = '0'; }
+      }
+      CELL_BALL.forEach((ball, i) => {
+        const empty = ball < 0;
+        const rect = document.getElementById('cell-rect-' + i);
+        if (rect) rect.setAttribute('fill', empty ? '#181818' : DARK_FILL[ball]);
+        const lbl = document.getElementById('cell-label-' + i);
+        if (lbl) lbl.setAttribute('fill', empty ? '#484848' : hue2(ball));
+      });
+    }
+
+    function revealBeat(beat) {
+      const ball = CELL_BALL[beat];
+      if (ball >= 0 && beat < 6) {  // throw cell: highlight it
+        const rect = document.getElementById('cell-rect-' + beat);
+        if (rect) rect.setAttribute('fill', hue2(ball));
+        const lbl = document.getElementById('cell-label-' + beat);
+        if (lbl) lbl.setAttribute('fill', '#000');
+      }
+      const ai = LANDING_AT[beat];  // landing: show the arrow
+      if (ai !== undefined) {
+        const el = document.getElementById('arrow-' + ai);
+        if (el) { el.style.transition = 'opacity 0.25s ease'; el.style.opacity = '1'; }
+      }
+    }
+
+    function hideBeat(beat) {
+      const ball = CELL_BALL[beat];
+      if (ball >= 0 && beat < 6) {
+        const rect = document.getElementById('cell-rect-' + beat);
+        if (rect) rect.setAttribute('fill', DARK_FILL[ball]);
+        const lbl = document.getElementById('cell-label-' + beat);
+        if (lbl) lbl.setAttribute('fill', hue2(ball));
+      }
+      const ai = LANDING_AT[beat];
+      if (ai !== undefined) {
+        const el = document.getElementById('arrow-' + ai);
+        if (el) { el.style.transition = 'none'; el.style.opacity = '0'; }
+      }
+    }
+
+    function startAnim2() {
+      canvas2.width  = canvas2.offsetWidth;
+      canvas2.height = canvas2.offsetHeight;
+      if (anim2) anim2.stop();
+      resetDiagram();
+      anim2 = startJuggling(canvas2, {
+        siteswap: '51',
+        refThrow: 5,
+        height:   Math.round(canvas2.height * 0.48),
+        spacing:  Math.round(canvas2.width  * 0.30),
+        floorY:   Math.round(canvas2.height * 0.62),
+      });
+      // re-apply visible fragments and seek animation to matching position
+      let visibleBeats = 0;
+      document.querySelectorAll('#frag-triggers .fragment.visible').forEach(frag => {
+        revealBeat(parseInt(frag.getAttribute('data-fragment-index')));
+        visibleBeats++;
+      });
+      anim2.seekTo(visibleBeats * anim2.T);
+    }
+
+    function stopAnim2() {
+      if (anim2) { anim2.stop(); anim2 = null; }
+    }
+
+    // ── Lifecycle ─────────────────────────────────────────────────────────────
+    Reveal.on('ready', () => {
+      startAnimation();
+      if (Reveal.getIndices().h === 1) startAnim2();
+    });
+
+    Reveal.on('slidechanged', event => {
+      if (event.indexh === 1) startAnim2();
+      else stopAnim2();
+    });
+
+    Reveal.on('fragmentshown', event => {
+      if (Reveal.getIndices().h !== 1) return;
+      const beat = parseInt(event.fragment.getAttribute('data-fragment-index'));
+      revealBeat(beat);
+      anim2.stepBeats(1);
+    });
+
+    Reveal.on('fragmenthidden', event => {
+      if (Reveal.getIndices().h !== 1) return;
+      const beat = parseInt(event.fragment.getAttribute('data-fragment-index'));
+      hideBeat(beat);
+      anim2.seekTo(beat * anim2.T);
+    });
+
+    window.addEventListener('resize', () => {
+      canvas.width  = canvas.offsetWidth;
+      canvas.height = canvas.offsetHeight;
+      if (anim2) startAnim2();
+    });
+  </script>
+</body>
+</html>
