@@ -19,7 +19,7 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
+      justify-content: flex-start;
     }
     #juggle-canvas {
       position: absolute;
@@ -43,7 +43,7 @@
       margin-right: auto;
     }
    .ss-digit {
-      font-size: 20px;
+      font-size: 40px;
        /* transition: color 0.12s; */
       color: #bbb;
       text-shadow: 0 1px 4px rgba(0,0,0,0.08);
@@ -84,7 +84,9 @@
       </section>
 
       <!-- Slide 1: 441 juggling -->
-      <section data-slide="juggling-441">
+      <section data-slide="juggling"
+               data-siteswap="441" data-ref-throw="4"
+               data-height-ratio="0.55" data-spacing-ratio="0.1" data-floor-ratio="0.82">
         <div class="slide-juggling">
 	  <div id="siteswap-display">
             <span class="ss-digit" id="d0">4</span>
@@ -214,36 +216,37 @@
   <script>
     Reveal.initialize({ hash: true, controls: false, progress: false });
 
-    // ── Slide 1: 441 ─────────────────────────────────────────────────────────
-    const canvas = document.getElementById('juggle-canvas');
+    // ── Generic juggling slides ───────────────────────────────────────────────
     let anim = null;
-    const digits = [
-      document.getElementById('d0'),
-      document.getElementById('d1'),
-      document.getElementById('d2'),
-    ];
-    const lastColor = [null, null, null];
 
-    function onBeat(beatPos, throwVal, color) {
-      const mid = color[1];
-      digits[beatPos].style.color = mid;
-      digits[beatPos].style.textShadow = `0 0 40px ${mid}, 0 1px 4px rgba(0,0,0,0.08)`;
-      if (lastColor[beatPos]) clearTimeout(lastColor[beatPos]);
-      lastColor[beatPos] = setTimeout(() => {
-        digits[beatPos].style.color = '#bbb';
-        digits[beatPos].style.textShadow = '0 1px 4px rgba(0,0,0,0.08)';
-      }, 400);
-    }
+    function startJugglingSlide(section) {
+      const canvas  = section.querySelector('canvas');
+      const digits  = [...section.querySelectorAll('.ss-digit')];
+      const timers  = digits.map(() => null);
 
-    function startAnimation() {
       canvas.width  = canvas.offsetWidth;
       canvas.height = canvas.offsetHeight;
+
+      const onBeat = digits.length ? (beatPos, throwVal, color) => {
+        const mid = color[1], digit = digits[beatPos];
+        if (!digit) return;
+        digit.style.color = mid;
+        digit.style.textShadow = `0 0 40px ${mid}, 0 1px 4px rgba(0,0,0,0.08)`;
+        if (timers[beatPos]) clearTimeout(timers[beatPos]);
+        timers[beatPos] = setTimeout(() => {
+          digit.style.color = '#bbb';
+          digit.style.textShadow = '0 1px 4px rgba(0,0,0,0.08)';
+        }, 400);
+      } : null;
+
+      const ds = section.dataset;
+      if (anim) anim.stop();
       anim = startJuggling(canvas, {
-        siteswap: '441',
-        refThrow: 4,
-        height:   Math.round(canvas.height * 0.55),
-        spacing:  Math.round(canvas.width  * 0.28),
-        floorY:   Math.round(canvas.height * 0.82),
+        siteswap: ds.siteswap  ?? '3',
+        refThrow: parseFloat(ds.refThrow     ?? '3'),
+        height:   Math.round(canvas.height * parseFloat(ds.heightRatio  ?? '0.55')),
+        spacing:  Math.round(canvas.width  * parseFloat(ds.spacingRatio ?? '0.28')),
+        floorY:   Math.round(canvas.height * parseFloat(ds.floorRatio   ?? '0.82')),
         onBeat,
       });
     }
@@ -340,17 +343,17 @@
 
     Reveal.on('ready', () => {
       const slide = Reveal.getCurrentSlide();
-      if (slideId(slide) === 'juggling-441') startAnimation();
-      if (slideId(slide) === 'juggling-51')  startAnim2();
+      if (slideId(slide) === 'juggling')    startJugglingSlide(slide);
+      if (slideId(slide) === 'juggling-51') startAnim2();
     });
 
     Reveal.on('slidechanged', event => {
       const prev = slideId(event.previousSlide);
       const curr = slideId(event.currentSlide);
-      if (prev === 'juggling-441') anim?.stop();
-      if (prev === 'juggling-51')  stopAnim2();
-      if (curr === 'juggling-441') startAnimation();
-      if (curr === 'juggling-51')  startAnim2();
+      if (prev === 'juggling')    anim?.stop();
+      if (prev === 'juggling-51') stopAnim2();
+      if (curr === 'juggling')    startJugglingSlide(event.currentSlide);
+      if (curr === 'juggling-51') startAnim2();
     });
 
     Reveal.on('fragmentshown', event => {
@@ -368,9 +371,9 @@
     });
 
     window.addEventListener('resize', () => {
-      canvas.width  = canvas.offsetWidth;
-      canvas.height = canvas.offsetHeight;
-      if (anim2) startAnim2();
+      const slide = Reveal.getCurrentSlide();
+      if (slideId(slide) === 'juggling')    startJugglingSlide(slide);
+      if (slideId(slide) === 'juggling-51') startAnim2();
     });
   </script>
 </body>
