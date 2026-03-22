@@ -70,9 +70,7 @@
         <!-- full-slide background canvas for the 51 animation -->
         <canvas id="canvas-51" style="position:absolute;top:0;left:0;width:100%;height:100%;"></canvas>
         <!-- state diagram overlaid at bottom with gradient for legibility -->
-        <div style="position:absolute;bottom:0;left:0;right:0;
-                    background:linear-gradient(transparent,rgba(255,255,255,0.95) 28%);
-                    padding-top:70px;">
+        <div style="position:absolute;bottom:0;left:0;right:0;padding-top:70px;">
         <div id="state-diagram-container"></div>
         <script>
         (function () {
@@ -118,8 +116,8 @@
           const lbl = (text, x) =>
             draw.plain(text).attr({ x, y: 26 })
                 .fill('#888').font({ size: 14, family: 'sans-serif', anchor: 'middle' });
-          lbl('throws',       Math.round((cx(0) + cx(5)) / 2));
-          lbl('balls in air', Math.round((cx(6) + cx(9)) / 2));
+          // lbl('throws',       Math.round((cx(0) + cx(5)) / 2));
+          // lbl('balls in air', Math.round((cx(6) + cx(9)) / 2));
 
           // separator
           draw.line(SEP, 16, SEP, Y0 + CH + 8)
@@ -273,15 +271,17 @@
     function startAnim2() {
       canvas2.width  = canvas2.offsetWidth;
       canvas2.height = canvas2.offsetHeight;
+
       if (anim2) anim2.stop();
       resetDiagram();
       anim2 = startJuggling(canvas2, {
         siteswap:       '51',
         refThrow:       5,
-        height:         Math.round(canvas2.height * 0.48),
-        spacing:        Math.round(canvas2.width  * 0.30),
-        floorY:         Math.round(canvas2.height * 0.62),
+        height:         Math.round(canvas2.height * 0.4),
+        spacing:        Math.round(canvas2.width  * 0.1),
+        floorY:         Math.round(canvas2.height * 0.5),
         throwCutoffBeat: 6,
+        showFloor:       true,
       });
       // re-apply visible fragments and seek animation to matching position
       let visibleBeats = 0;

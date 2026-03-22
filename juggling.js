@@ -18,6 +18,7 @@ function startJuggling(canvas, {
   floorY            = null,
   onBeat            = null,
   throwCutoffBeat   = null,   // balls landing at beat >= this disappear instead of re-throwing
+  showFloor         = false,  // draw a dashed line at FLOOR_Y
 } = {}) {
   const ctx = canvas.getContext('2d');
 
@@ -195,6 +196,19 @@ function startJuggling(canvas, {
     return Math.max(0, 0.5 + 0.5 * Math.cos(p * Math.PI * 3));
   }
 
+  function drawFloor() {
+    if (!showFloor) return;
+    ctx.save();
+    ctx.strokeStyle = 'rgba(0,0,0,0.15)';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([8, 6]);
+    ctx.beginPath();
+    ctx.moveTo(0, FLOOR_Y);
+    ctx.lineTo(canvas.width, FLOOR_Y);
+    ctx.stroke();
+    ctx.restore();
+  }
+
   function drawBall(x, y, [hi, mid, lo], alpha = 1) {
     ctx.globalAlpha = alpha;
     ctx.beginPath();
@@ -220,6 +234,7 @@ function startJuggling(canvas, {
 
     if (simLimit !== null && t >= simLimit) {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawFloor();
       for (const ball of balls) { updateBall(ball, simLimit); if (ball.phase !== 'gone') drawBall(ball.x, ball.y, ball.color, landedAlpha(ball, simLimit)); }
       simOffset = simLimit;
       animId = null;
@@ -227,6 +242,7 @@ function startJuggling(canvas, {
     }
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    drawFloor();
     for (const ball of balls) {
       updateBall(ball, t);
       if (ball.phase !== 'gone') drawBall(ball.x, ball.y, ball.color, landedAlpha(ball, t));
@@ -241,6 +257,7 @@ function startJuggling(canvas, {
     initialBalls.forEach(b => balls.push({ ...b }));
     for (const ball of balls) updateBall(ball, targetT);
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    drawFloor();
     for (const ball of balls) { if (ball.phase !== 'gone') drawBall(ball.x, ball.y, ball.color, landedAlpha(ball, targetT)); }
     simOffset = targetT;
     animStartTime = null;
