@@ -83,10 +83,42 @@
 	</ul>
       </section>
 
+      <!-- Slide 1: 3 juggling -->
+      <section data-slide="juggling"
+               data-siteswap="3">
+        <div class="slide-juggling">
+	  <div id="siteswap-display">
+            <span class="ss-digit" id="d0">3</span>
+	  </div>
+	  <canvas id="juggle-canvas"></canvas>
+        </div>
+      </section>
+
+      <!-- Slide 1: 4 juggling -->
+      <section data-slide="juggling"
+               data-siteswap="4">
+        <div class="slide-juggling">
+	  <div id="siteswap-display">
+            <span class="ss-digit" id="d0">4</span>
+	  </div>
+	  <canvas id="juggle-canvas"></canvas>
+        </div>
+      </section>
+
+      <!-- Slide 1: 5 juggling -->
+      <section data-slide="juggling"
+               data-siteswap="5">
+        <div class="slide-juggling">
+	  <div id="siteswap-display">
+            <span class="ss-digit" id="d0">5</span>
+	  </div>
+	  <canvas id="juggle-canvas"></canvas>
+        </div>
+      </section>
+
       <!-- Slide 1: 441 juggling -->
       <section data-slide="juggling"
-               data-siteswap="441" data-ref-throw="4"
-               data-height-ratio="0.55" data-spacing-ratio="0.1" data-floor-ratio="0.82">
+               data-siteswap="441">
         <div class="slide-juggling">
 	  <div id="siteswap-display">
             <span class="ss-digit" id="d0">4</span>
@@ -96,6 +128,33 @@
 	  <canvas id="juggle-canvas"></canvas>
         </div>
       </section>
+
+
+      <!-- Slide 1: 534 juggling -->
+      <section data-slide="juggling"
+               data-siteswap="534">
+        <div class="slide-juggling">
+	  <div id="siteswap-display">
+            <span class="ss-digit" id="d0">5</span>
+            <span class="ss-digit" id="d1">3</span>
+            <span class="ss-digit" id="d2">4</span>
+	  </div>
+	  <canvas id="juggle-canvas"></canvas>
+        </div>
+      </section>
+
+
+      <!-- Slide 1: z juggling -->
+      <section data-slide="juggling"
+               data-siteswap="123456789abcdefghijklmnopqrstuvwxyz" data-ref-throw="26">
+        <div class="slide-juggling">
+	  <div id="siteswap-display">
+	    <p style="font-size:20px;">123456789abcdefghijklmnopqrstuvwxyz</p>
+	  </div>
+	  <canvas id="juggle-canvas"></canvas>
+        </div>
+      </section>
+
 
       <!-- Slide 2: 51 juggling + state diagram -->
       <section data-slide="juggling-51">
@@ -243,9 +302,9 @@
       if (anim) anim.stop();
       anim = startJuggling(canvas, {
         siteswap: ds.siteswap  ?? '3',
-        refThrow: parseFloat(ds.refThrow     ?? '3'),
+        refThrow: parseFloat(ds.refThrow     ?? '5'),
         height:   Math.round(canvas.height * parseFloat(ds.heightRatio  ?? '0.55')),
-        spacing:  Math.round(canvas.width  * parseFloat(ds.spacingRatio ?? '0.28')),
+        spacing:  Math.round(canvas.width  * parseFloat(ds.spacingRatio ?? '0.1')),
         floorY:   Math.round(canvas.height * parseFloat(ds.floorRatio   ?? '0.82')),
         onBeat,
       });
