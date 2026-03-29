@@ -20,8 +20,8 @@ Enjoy!
 Did you like it? Here are some of the references i used and other fun stuff i recommend:
 
 - https://en.wikipedia.org/wiki/Siteswap
-- https://www.youtube.com/watch?v=38rf9FLhl-8&t=110s (mathematics of juggling lecture by Allen Knutson)
-- https://www.youtube.com/watch?v=ELvedTUcjPo&t=36s (a TEDx talk)
+- https://www.youtube.com/watch?v=38rf9FLhl-8 (mathematics of juggling lecture by Allen Knutson)
+- https://www.youtube.com/watch?v=ELvedTUcjPo (a TEDx talk)
 - https://www.qedcat.com/articles/juggling_survey.pdf (survey on mathematical juggling by Burkard Polster, he also wrote [a whole book](https://link.springer.com/book/10.1007/b98883))
 - https://arxiv.org/pdf/math/0302257 (paper on the probability of juggling patterns when "juggling randomly")
 
